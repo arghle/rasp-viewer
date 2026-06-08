@@ -5,6 +5,7 @@ import validIndicator from './valid-indicator.js';
 import datetimeSelector from './datetime-selector.js';
 import crosssectionControl from './crosssection-control.js';
 import soundingControl from './sounding-control.js';
+import SkewT from './skewt.js';
 import raspLayer from './rasp-layer.js';
 import * as GeoTIFF from 'geotiff';
 
@@ -48,7 +49,12 @@ L.Control.RASPControl = L.Control.extend({
             });
 
         this.on('modelDayChange', () => { this.modelDayChange(); });
-        this.on('timeChange', () => { this.update(); });
+        this.on('timeChange', () => {
+            this.update();
+            if (this.currentPlot && this.currentPlot.type === "meteogram" && this.currentPlot.viewMode === "sounding") {
+                this.updatePlot();
+            }
+        });
 
         return this._container;
     },
@@ -157,30 +163,38 @@ L.Control.RASPControl = L.Control.extend({
         opacitySlider.value = cDefaults.opacityLevel * 100;
         opacitySlider.oninput = (e) => { this.raspLayer.setOpacity(e.target.valueAsNumber / 100); };
 
-        var interactiveDiv = L.DomUtil.create('div', 'mb-2', this._raspPanel);
-        var interactiveButtons = L.DomUtil.create('div', 'input-group', interactiveDiv);
-        var interactiveIcon = L.DomUtil.create('span', 'input-group-text bg-light', interactiveButtons);
-        interactiveIcon.innerHTML += `<svg viewBox="0 0 40 40" height="1.5rem" width="1.5rem"><use href="img/sprites.svg#interactive" xlink:href="img/sprites.svg#interactive"></use></svg>`;
-        interactiveIcon.title = dict("interactiveIcon_title");
-        this.crosssectionButton = L.DomUtil.create('button', 'btn btn-outline-primary', interactiveButtons);
-        this.crosssectionButton.innerHTML = dict("crosssection");
-        this.crosssectionButton.title = dict("crosssection");
-        this.soundingButton = L.DomUtil.create('button', 'btn btn-outline-primary', interactiveButtons);
-        this.soundingButton.innerHTML = dict("sounding");
-        this.soundingButton.title = dict("sounding");
-        this.interactiveHelp = L.DomUtil.create('div', 'mt-1', interactiveDiv);
-        this.interactiveStatus = L.DomUtil.create('div', 'text-danger', interactiveDiv);
-        this.crosssectionControl = crosssectionControl(this);
-        this.soundingControl = soundingControl(this);
+        if (cDefaults.enableInteractiveTools) {
+            var interactiveDiv = L.DomUtil.create('div', 'mb-2', this._raspPanel);
+            var interactiveButtons = L.DomUtil.create('div', 'input-group', interactiveDiv);
+            var interactiveIcon = L.DomUtil.create('span', 'input-group-text bg-light', interactiveButtons);
+            interactiveIcon.innerHTML += `<svg viewBox="0 0 40 40" height="1.5rem" width="1.5rem"><use href="img/sprites.svg#interactive" xlink:href="img/sprites.svg#interactive"></use></svg>`;
+            interactiveIcon.title = dict("interactiveIcon_title");
+            
+            this.crosssectionButton = L.DomUtil.create('button', 'btn btn-outline-primary', interactiveButtons);
+            this.crosssectionButton.innerHTML = dict("crosssection");
+            this.crosssectionButton.title = dict("crosssection");
+            
+            this.soundingButton = L.DomUtil.create('button', 'btn btn-outline-primary', interactiveButtons);
+            this.soundingButton.innerHTML = dict("sounding");
+            this.soundingButton.title = dict("sounding");
+            
+            this.interactiveHelp = L.DomUtil.create('div', 'mt-1', interactiveDiv);
+            this.interactiveStatus = L.DomUtil.create('div', 'text-danger', interactiveDiv);
+            
+            this.crosssectionControl = crosssectionControl(this);
+            this.soundingControl = soundingControl(this);
+        }
 
-        var meteogramDiv = L.DomUtil.create('div', '', this._raspPanel);
-        var meteogramLabel = L.DomUtil.create('label', '', meteogramDiv);
-        meteogramLabel.title = dict("Meteograms");
-        this.meteogramCheckbox = L.DomUtil.create('input', 'me-1', meteogramLabel);
-        this.meteogramCheckbox.type = 'checkbox';
-        this.meteogramCheckbox.onchange = () => { this.toggleMeteograms(); };
-        var meteogramText = L.DomUtil.create('span', '', meteogramLabel);
-        meteogramText.innerHTML = dict("Meteograms");
+        if (!cDefaults.alwaysShowMeteograms) {
+            var meteogramDiv = L.DomUtil.create('div', '', this._raspPanel);
+            var meteogramLabel = L.DomUtil.create('label', '', meteogramDiv);
+            meteogramLabel.title = dict("Meteograms");
+            this.meteogramCheckbox = L.DomUtil.create('input', 'me-1', meteogramLabel);
+            this.meteogramCheckbox.type = 'checkbox';
+            this.meteogramCheckbox.onchange = () => { this.toggleMeteograms(); };
+            var meteogramText = L.DomUtil.create('span', '', meteogramLabel);
+            meteogramText.innerHTML = dict("Meteograms");
+        }
 
         this._collapseLink = L.DomUtil.create('a', 'leaflet-control-collapse-button', this._raspPanel);
         this._collapseLink.innerHTML = '⇱';
@@ -423,33 +437,89 @@ L.Control.RASPControl = L.Control.extend({
         this._armLoadingAnimation();
     },
     toggleMeteograms: function() {
-        if (this.meteogramCheckbox.checked) {
-            this.meteogramOverlay.addTo(this._map);
+        if (cDefaults.alwaysShowMeteograms || (this.meteogramCheckbox && this.meteogramCheckbox.checked)) {
+            if (this.meteogramOverlay) {
+                this.meteogramOverlay.addTo(this._map);
+            }
         } else {
             if (this.currentPlot && this.currentPlot.type == "meteogram") {
                 this.closePlot();
             }
-            this.meteogramOverlay.remove();
+            if (this.meteogramOverlay) {
+                this.meteogramOverlay.remove();
+            }
         }
     },
     disableAllMapSelectors: function() {
-        this.crosssectionControl.disable();
-        this.soundingControl.disable();
+        if (this.crosssectionControl) {
+            this.crosssectionControl.disable();
+        }
+        if (this.soundingControl) {
+            this.soundingControl.disable();
+        }
     },
     closePlot: function() {
         this.plot.style.display = "none";
         this._map.invalidateSize();
         this.currentPlot = null;
-        this.crosssectionControl.clear();
-        this.soundingControl.clear();
+        if (this.crosssectionControl) {
+            this.crosssectionControl.clear();
+        }
+        if (this.soundingControl) {
+            this.soundingControl.clear();
+        }
         this.togglePanelOrOffcanvas();
     },
     updatePlot: function() {
         this.plot.style.display = "";
         this.plotContent.innerHTML = "";
         if (this.currentPlot.type == "meteogram") {
-            this.currentPlot.image.style.objectFit = "contain";
-            this.plotContent.appendChild(this.currentPlot.image);
+            // 1. Create tab navigation using Bootstrap styles
+            var tabList = L.DomUtil.create('ul', 'nav nav-tabs mb-2', this.plotContent);
+            
+            var itemMeteogram = L.DomUtil.create('li', 'nav-item', tabList);
+            var btnMeteogram = L.DomUtil.create('button', 'nav-link' + (this.currentPlot.viewMode === "meteogram" ? " active" : ""), itemMeteogram);
+            btnMeteogram.innerText = dict("Meteograms").split(" & ")[0];
+            btnMeteogram.onclick = () => {
+                this.currentPlot.viewMode = "meteogram";
+                this.updatePlot();
+            };
+            
+            var itemSounding = L.DomUtil.create('li', 'nav-item', tabList);
+            var btnSounding = L.DomUtil.create('button', 'nav-link' + (this.currentPlot.viewMode === "sounding" ? " active" : ""), itemSounding);
+            btnSounding.innerText = dict("sounding");
+            if (!this.currentPlot.soundingData) {
+                btnSounding.disabled = true;
+                btnSounding.classList.add("disabled");
+            }
+            btnSounding.onclick = () => {
+                this.currentPlot.viewMode = "sounding";
+                this.updatePlot();
+            };
+
+            // 2. Display the selected mode content
+            var displayContainer = L.DomUtil.create('div', 'plot-display', this.plotContent);
+            if (this.currentPlot.viewMode === "meteogram") {
+                if (this.currentPlot.image) {
+                    this.currentPlot.image.style.objectFit = "contain";
+                    displayContainer.appendChild(this.currentPlot.image);
+                } else {
+                    displayContainer.innerHTML = `<div class="p-3 text-center text-muted">${dict("dataMissing")}</div>`;
+                }
+            } else if (this.currentPlot.viewMode === "sounding") {
+                var datetimeUTC = this.datetimeSelector.get().datetimeUTC;
+                var soundingJson = this.currentPlot.soundingData[datetimeUTC] || this.currentPlot.soundingData[datetimeUTC.substring(0, 19) + "Z"];
+                if (soundingJson) {
+                    var skewtContainer = L.DomUtil.create('div', 'skewt-plot-container', displayContainer);
+                    skewtContainer.id = "skewtPlotArea";
+                    skewtContainer.style.width = "100%";
+                    skewtContainer.style.height = "100%";
+                    var skewt = new SkewT('#skewtPlotArea');
+                    skewt.plot(soundingJson);
+                } else {
+                    displayContainer.innerHTML = `<div class="p-3 text-center text-muted">${dict("dataMissing")}</div>`;
+                }
+            }
         }
         this.loadingPlot = false;
         this._hideLoadingAnimationMaybe();
@@ -465,20 +535,37 @@ L.Control.RASPControl = L.Control.extend({
                     .bindTooltip(meteogram.name)
                     .on('click', e => {
                         var dir = this.datetimeSelector.get().dir;
-                        var time = this.datetimeSelector.get().time;
-                        this.currentPlot = {type: "meteogram", key: meteogramKey};
-                        this.currentPlot.imageUrl = cDefaults.forecastServerResults + "/OUT/" + dir + "/meteogram_" + meteogramKey + ".png";
-                        this.currentPlot.image = new Image();
-                        this.currentPlot.image.onload = () => {
-                            this.updatePlot();
+                        this.currentPlot = {
+                            type: "meteogram",
+                            key: meteogramKey,
+                            soundingUrl: cDefaults.forecastServerResults + "/OUT/" + dir + "/sounding_" + meteogramKey + ".json",
+                            imageUrl: cDefaults.forecastServerResults + "/OUT/" + dir + "/meteogram_" + meteogramKey + ".png",
+                            viewMode: (this.currentPlot && this.currentPlot.key === meteogramKey && this.currentPlot.viewMode) ? this.currentPlot.viewMode : "meteogram"
                         };
-                        this.currentPlot.image.onerror = () => {
-                            this.loadingPlot = false;
-                            this._hideLoadingAnimationMaybe();
-                        };
-                        this.currentPlot.image.src = this.currentPlot.imageUrl;
                         this.loadingPlot = true;
                         this._armLoadingAnimation();
+                        
+                        Promise.all([
+                            fetch(this.currentPlot.soundingUrl)
+                                .then(res => {
+                                    if (res.ok) return res.json();
+                                    throw new Error("soundings not available");
+                                })
+                                .catch(() => null),
+                            new Promise((resolve) => {
+                                let img = new Image();
+                                img.onload = () => resolve(img);
+                                img.onerror = () => resolve(null);
+                                img.src = this.currentPlot.imageUrl;
+                            })
+                        ]).then(([soundingData, imageElement]) => {
+                            this.currentPlot.soundingData = soundingData;
+                            this.currentPlot.image = imageElement;
+                            this.updatePlot();
+                        }).catch(() => {
+                            this.loadingPlot = false;
+                            this._hideLoadingAnimationMaybe();
+                        });
                     })
             );
         }

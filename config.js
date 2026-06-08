@@ -2,8 +2,8 @@ import dict from './lang.js';
 
 // Used for the selectors and for auto populating other structures
 const cModels = {
-    "TIR": {
-        description: "TIR 2km",
+    "MIDNORWAY": {
+        description: "MIDNORWAY 2km",
         days: [-2, -1, 0, 1],
         hours: ["0800", "0900", "1000", "1100", "1200", "1300", "1400", "1500", "1600", "1700", "1800", "1900", "2000"],
         timezone: "Europe/Berlin",
@@ -131,6 +131,15 @@ const cParameters = {
 };
 
 const cMeteograms = {
+    "MIDNORWAY": {
+        "Oppdal":       { name: "Oppdal",       location: ["62.59", "9.69"]},
+        "Roros":        { name: "Røros",         location: ["62.57", "11.38"]},
+        "Sunndalsora":  { name: "Sunndalsøra",   location: ["62.68", "8.56"]},
+        "Dombas":       { name: "Dombås",        location: ["62.07", "9.12"]},
+        "Otta":         { name: "Otta",          location: ["61.77", "9.54"]},
+        "Trondheim":    { name: "Trondheim",     location: ["63.43", "10.39"]},
+        "Bjorli":       { name: "Bjorli",        location: ["62.25", "8.21"]}
+    },
     "TIR": {
         // keys: "Someplace" -> meteogram_Someplace, ...
         "Tirschenreuth":      { name: "Tirschenreuth",     location: ["49.8741", "12.3272"]},
@@ -173,14 +182,16 @@ const cDefaults = {
     zoom: 7,
     minZoom: 3,
     maxZoom: 14,
-    model: "TIR",                          // default model to start on
+    model: "MIDNORWAY",                          // default model to start on
     parameter: "wstar",                    // which paramter to start on
     startHour: '1300',
     opacityLevel: 0.7,
     loadingAnimationDelay: 100,            // ms. Wait this long before showing a loading animation for the to-be-shown overlay
     soundingMarker: 'img/sounding.svg',
     meteogramMarker: 'img/meteogram.svg',
-    markerSize: 15
+    markerSize: 25,
+    enableInteractiveTools: false,
+    alwaysShowMeteograms: true
 };
 
 export { cModels, cColorscales, cParameters, cMeteograms, cLayers, cDefaults };
