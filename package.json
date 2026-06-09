@@ -4,9 +4,13 @@
   "description": "",
   "main": "app.js",
   "type": "module",
+  "config": {
+    "deploy_target": "rasp@cumulus.skydiveoppdal.no:/srv/www/rasp.skydiveoppdal.no/www/"
+  },
   "scripts": {
     "build": "npx rollup -c",
-    "watch": "npx rollup -c -w"
+    "watch": "npx rollup -c -w",
+    "deploy": "rsync -avz img index.html style.css bundle $npm_package_config_deploy_target"
   },
   "author": "Florian Sammüller",
   "license": "ISC",
