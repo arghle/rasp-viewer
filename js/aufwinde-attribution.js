@@ -7,7 +7,7 @@ L.Control.Attribution.Aufwinde = L.Control.Attribution.extend({
         var parent = this._container.parentNode;
         parent.onclick = event => event.stopPropagation();
         var aufwindeAttribution = document.createElement('div');
-        aufwindeAttribution.innerHTML = "<a href='/'>aufwin.de</a>&nbsp;| <a href='.' onclick=\"localStorage.setItem('lang','de');\">DE</a>&nbsp;· <a href='.' onclick=\"localStorage.setItem('lang','en');\">EN</a>&nbsp;· <a href='https://www.paypal.com/donate/?hosted_button_id=KU8658JS39LP8'>❤️ " + dict("Donate") + "</a>&nbsp;· ";
+        aufwindeAttribution.innerHTML = "<a href='https://aufwin.de/'>aufwin.de</a>&nbsp;| <a href='.' onclick=\"localStorage.setItem('lang','de');\">DE</a>&nbsp;· <a href='.' onclick=\"localStorage.setItem('lang','en');\">EN</a>&nbsp;· <a href='https://www.paypal.com/donate/?hosted_button_id=KU8658JS39LP8'>❤️ " + dict("Donate") + "</a>&nbsp;· ";
         aufwindeAttribution.classList.add('leaflet-control');
         aufwindeAttribution.classList.add('leaflet-control-attribution');
         var aufwindeAttributionDetails = document.createElement('div');
